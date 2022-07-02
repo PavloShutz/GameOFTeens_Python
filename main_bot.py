@@ -78,18 +78,21 @@ def begin_calculate_expenses(message):
             bot.register_next_step_handler(msg, choose_category)
         else:
             bot.reply_to(message, 'Обраховую витрати...')
-            conversation = "False"
-            with open('status.txt', 'w') as saver:
-                saver.write(conversation)
             expenses = calculate_expenses()
             for expense in expenses:
                 bot.send_message(message.chat.id, expense)
-            bot.send_message(message.chat.id, f'Зверніть увагу на категорію {max(results, key=results.get)}: тут ідуть найбільші витрати!')
             bot.send_message(message.chat.id,
-                             f'Зверніть увагу на категорію {min(results, key=results.get)}: тут ідуть найменші витрати!')
+                             f'Зверніть увагу на категорію {max(results, key=results.get)}: тут ідуть найбільші витрати!'
+                             )
+            bot.send_message(message.chat.id,
+                             f'Зверніть увагу на категорію {min(results, key=results.get)}: тут ідуть найменші витрати!'
+                             )
             for value in results.keys():
                 results[value] = 0
             clear_data()
+            conversation = "False"
+            with open('status.txt', 'w') as saver:
+                saver.write(conversation)
             return
     if message.text.lower() == start_buttons[1]:
         if conversation == "False":
@@ -138,7 +141,10 @@ def get_amount_of_money(message):
         bot.reply_to(message, 'Сумма має бути числом!')
         return
     data['Total expenses'] = user_amount_of_expenses
-    bot.send_message(message.chat.id, 'Добре, я записав це!')
+    start_markup = types.ReplyKeyboardMarkup()
+    for i in start_buttons:
+        start_markup.add(types.KeyboardButton(i.title()))
+    bot.send_message(message.chat.id, 'Добре, я записав це!', reply_markup=start_markup)
     save_expense()
 
 

@@ -4,7 +4,7 @@ import telebot
 from telebot import types
 from save_data import save_data, clear_data
 
-token = '5329245219:AAFk9jZCoshDSu08SkACDgp2xC8m8_s7X1I'
+token = 'token'
 
 with open('status.txt', 'r') as f:
     conversation = f.read()

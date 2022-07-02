@@ -24,6 +24,7 @@ class Bot:
         }
         self.days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
         self.data = {}
+        self.total_expense = 0
 
         @self.bot.message_handler(commands=['start'])
         def start_bot(message):
@@ -31,8 +32,9 @@ class Bot:
             for i in self.start_buttons:
                 start_markup.add(types.KeyboardButton(i.title()))
             self.bot.send_message(message.chat.id, f"""
-        Привіт, {message.chat.first_name}, я допоможу тобі порахувати \
-        всі твої витрати та дізнатися, на які сфери життя тобі треба дивитися більше
+                Привіт, {message.chat.first_name},
+я допоможу тобі порахувати всі твої витрати 💵 та дізнатися,
+на які сфери життя тобі треба дивитися більше 📜.
         """, reply_markup=start_markup)
 
         @self.bot.message_handler(content_types=['text'])
@@ -55,8 +57,26 @@ class Bot:
                     expenses = self.calculate_expenses()
                     reply = '\n'.join(f"{i} - {expenses[i]:.2f} %" for i in expenses.keys() if self.results[i] != 0)
                     self.bot.send_message(message.chat.id, reply)
-                    most_expense = max(self.results, key=self.results.get)
-                    least_expense = min(self.results, key=self.results.get)
+                    new_results = {}
+                    for i in self.results.keys():
+                        if self.results[i] != 0:
+                            new_results[i] = self.results[i]
+                    if len(new_results) == 1:
+                        key = [k for k, v in new_results.items() if v == 100][0]
+                        self.bot.send_message(message.chat.id,
+                                              f'Зверніть увагу на категорію "{key}": сюди ідуть усі витрати!'
+                                              )
+                        for value in self.results.keys():
+                            self.results[value] = 0
+                        clear_data()
+                        self.total_expense = 0
+                        self.conversation = "False"
+                        with open('status.txt', 'w') as saver:
+                            saver.write(self.conversation)
+                        new_results.clear()
+                        return
+                    most_expense = max(new_results, key=new_results.get)
+                    least_expense = min(new_results, key=new_results.get)
                     self.bot.send_message(message.chat.id,
                                           f'Зверніть увагу на категорію "{most_expense}": сюди ідуть найбільше витрат!'
                                           )
@@ -66,6 +86,7 @@ class Bot:
                     for value in self.results.keys():
                         self.results[value] = 0
                     clear_data()
+                    self.total_expense = 0
                     self.conversation = "False"
                     with open('status.txt', 'w') as saver:
                         saver.write(self.conversation)
@@ -121,12 +142,11 @@ class Bot:
     def calculate_expenses(self):
         with open('expenses.json', 'r', encoding='utf8') as j:
             expenses_data = json.loads(j.read())
-        total_expense = 0
         for expense in expenses_data['expenses']:
             self.results[expense['Category']] += float(expense['Total expenses'])
-            total_expense += float(expense['Total expenses'])
+            self.total_expense += float(expense['Total expenses'])
         for i in self.results.keys():
-            self.results[i] = (self.results[i] / total_expense) * 100
+            self.results[i] = (self.results[i] / self.total_expense) * 100
         return self.results
 
     def save_expense(self):

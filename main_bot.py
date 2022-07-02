@@ -12,7 +12,7 @@ class Bot:
     def __init__(self):
         self.token = '5329245219:AAFk9jZCoshDSu08SkACDgp2xC8m8_s7X1I'
         self.bot = telebot.TeleBot(self.token)
-        self.start_buttons = ['begin calculate expenses', 'add expense', 'calculate expenses']
+        self.start_buttons = ['почати обраховувати витрати', 'додати витрату', 'обрахувати витрату(и)']
         self.results = {
             "Кар`єра 👩‍💻": 0,
             "Сім'я 👨‍👩‍👦‍👦": 0,
@@ -22,7 +22,7 @@ class Bot:
             "Розвиток (освіта) 👨‍🎓": 0,
             "Здоров'я, спорт 🏓": 0
         }
-        self.days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        self.days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', "П'ятниця", 'Субота', 'Неділя']
         self.data = {}
         self.total_expense = 0
 
@@ -111,6 +111,7 @@ class Bot:
             user_category = message.text
             if user_category not in self.results:
                 self.bot.send_message(message.chat.id, "Такої категорії немає!")
+                return
             self.data['Category'] = user_category
             dates = types.ReplyKeyboardMarkup(one_time_keyboard=True)
             for date in self.days:

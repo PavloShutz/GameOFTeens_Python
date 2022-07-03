@@ -73,10 +73,13 @@ class Bot:
                     try:
                         self.bot.reply_to(message, 'Обраховую витрати...')
                         expenses = self.calculate_expenses()
-                        reply = '\n'.join(f"{expense} - {expenses[expense]:.2f} %"
-                                          for expense in expenses.keys()
-                                          if self.results[expense] != 0)
-                        self.bot.send_message(message.chat.id, reply)
+                        reply = '\n'.join(
+                            f"{expense} - {expenses[expense]:.2f} %"
+                            for expense in expenses.keys()
+                            if self.results[expense] != 0)
+                        self.bot.send_message(
+                            message.chat.id, reply,
+                        )
                         new_results = {}
                         for result in self.results.keys():
                             if self.results[result] != 0:
@@ -84,45 +87,41 @@ class Bot:
                         if len(new_results) == 1:
                             key = [k for k, v in new_results.items()
                                    if v == 100][0]
-                            self.bot.send_message(message.chat.id,
-                                                  'Зверніть увагу на категорію '
-                                                  f'"{key}": '
-                                                  'сюди ідуть <b><u>усі</u></b> витрати!',
-                                                  reply_markup=self.start_markup,
-                                                  parse_mode='html',
-                                                  )
-                            for value in self.results.keys():
-                                self.results[value] = 0
-                            clear_data()
-                            self.total_expense = 0
-                            self.save_conversation_status("False")
-                            new_results.clear()
+                            self.bot.send_message(
+                                message.chat.id,
+                                'Зверніть увагу '
+                                'на категорію '
+                                f'"{key}": '
+                                'сюди ідуть <b><u>усі</u></b> витрати!',
+                                reply_markup=self.start_markup,
+                                parse_mode='html',
+                            )
+                            self.annul_results()
                             return
                         most_expense = max(new_results, key=new_results.get)
                         least_expense = min(new_results, key=new_results.get)
-                        self.bot.send_message(message.chat.id,
-                                              'Зверніть увагу на категорію '
-                                              f'"{most_expense}": '
-                                              'сюди ідуть <b><u>найбільше</u></b> витрат!',
-                                              parse_mode='html',
-                                              )
-                        self.bot.send_message(message.chat.id,
-                                              'Зверніть увагу на категорію '
-                                              f'"{least_expense}": '
-                                              'сюди ідуть <b><u>найменше</u></b> витрат!',
-                                              parse_mode='html',
-                                              )
-                        for value in self.results.keys():
-                            self.results[value] = 0
-                        clear_data()
-                        self.total_expense = 0
-                        self.save_conversation_status("False")
+                        self.bot.send_message(
+                            message.chat.id,
+                            'Зверніть увагу на категорію '
+                            f'"{most_expense}": '
+                            'сюди ідуть <b><u>найбільше</u></b> витрат!',
+                            parse_mode='html',
+                        )
+                        self.bot.send_message(
+                            message.chat.id,
+                            'Зверніть увагу на категорію '
+                            f'"{least_expense}": '
+                            'сюди ідуть <b><u>найменше</u></b> витрат!',
+                            parse_mode='html',
+                        )
+                        self.annul_results()
                         return
                     except AttributeError:
-                        self.bot.send_message(message.chat.id,
-                                              'Поки що немає чого обраховувати!',
-                                              reply_markup=self.start_markup,
-                                              )
+                        self.bot.send_message(
+                            message.chat.id,
+                            'Поки що немає чого обраховувати!',
+                            reply_markup=self.start_markup,
+                        )
                         self.save_conversation_status("False")
                         clear_data()
                         return
@@ -191,7 +190,9 @@ class Bot:
             he wants to count his expenses.
             """
             user_amount_of_expenses = message.text
-            if not user_amount_of_expenses.isdigit():
+            try:
+                float(user_amount_of_expenses)
+            except ValueError:
                 self.bot.send_message(message.chat.id,
                                       'Сумма має бути числом!',
                                       reply_markup=self.start_markup,
@@ -221,14 +222,25 @@ class Bot:
             return self.results
         except (ZeroDivisionError, AttributeError):
             self.save_conversation_status("False")
-            return
+            return None
+
+    def annul_results(self):
+        for value in self.results.keys():
+            self.results[value] = 0
+        clear_data()
+        self.total_expense = 0
+        self.save_conversation_status("False")
 
     def save_expense(self) -> None:
         """Saves data to json and clears old data"""
         save_data(self.data)
         self.data.clear()
 
-    def save_conversation_status(self, status):
+    def save_conversation_status(self, status: str) -> None:
+        """Saves conversation status in 'status.txt'
+        Args:
+            status (str): string representing of conversation status.
+        """
         self.conversation = status
         with open("status.txt", 'w') as saver:
             saver.write(self.conversation)

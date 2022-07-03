@@ -74,8 +74,8 @@ class Bot:
                         self.bot.reply_to(message, 'Обраховую витрати...')
                         expenses = self.calculate_expenses()
                         reply = '\n'.join(f"{expense} - {expenses[expense]:.2f} %"
-                                      for expense in expenses.keys()
-                                      if self.results[expense] != 0)
+                                          for expense in expenses.keys()
+                                          if self.results[expense] != 0)
                         self.bot.send_message(message.chat.id, reply)
                         new_results = {}
                         for result in self.results.keys():

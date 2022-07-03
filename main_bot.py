@@ -87,8 +87,9 @@ class Bot:
                             self.bot.send_message(message.chat.id,
                                                   'Зверніть увагу на категорію '
                                                   f'"{key}": '
-                                                  'сюди ідуть усі витрати!',
+                                                  'сюди ідуть <b><u>усі</u></b> витрати!',
                                                   reply_markup=self.start_markup,
+                                                  parse_mode='html',
                                                   )
                             for value in self.results.keys():
                                 self.results[value] = 0
@@ -102,12 +103,14 @@ class Bot:
                         self.bot.send_message(message.chat.id,
                                               'Зверніть увагу на категорію '
                                               f'"{most_expense}": '
-                                              'сюди ідуть найбільше витрат!',
+                                              'сюди ідуть <b><u>найбільше</u></b> витрат!',
+                                              parse_mode='html',
                                               )
                         self.bot.send_message(message.chat.id,
                                               'Зверніть увагу на категорію '
                                               f'"{least_expense}": '
-                                              'сюди ідуть найменше витрат!',
+                                              'сюди ідуть <b><u>найменше</u></b> витрат!',
+                                              parse_mode='html',
                                               )
                         for value in self.results.keys():
                             self.results[value] = 0

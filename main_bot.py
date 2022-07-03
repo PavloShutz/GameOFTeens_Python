@@ -4,6 +4,7 @@ built on pyTelegramBotApi.
 
 import json
 import os
+from typing import Optional
 
 import telebot  # type: ignore
 from telebot import types
@@ -69,50 +70,59 @@ class Bot:
                                                 )
                     self.bot.register_next_step_handler(msg, choose_category)
                 else:
-                    self.bot.reply_to(message, 'Обраховую витрати...')
-                    expenses = self.calculate_expenses()
-                    reply = '\n'.join(f"{expense} - {expenses[expense]:.2f} %"
+                    try:
+                        self.bot.reply_to(message, 'Обраховую витрати...')
+                        expenses = self.calculate_expenses()
+                        reply = '\n'.join(f"{expense} - {expenses[expense]:.2f} %"
                                       for expense in expenses.keys()
                                       if self.results[expense] != 0)
-                    self.bot.send_message(message.chat.id, reply)
-                    new_results = {}
-                    for result in self.results.keys():
-                        if self.results[result] != 0:
-                            new_results[result] = self.results[result]
-                    if len(new_results) == 1:
-                        key = [k for k, v in new_results.items()
-                               if v == 100][0]
+                        self.bot.send_message(message.chat.id, reply)
+                        new_results = {}
+                        for result in self.results.keys():
+                            if self.results[result] != 0:
+                                new_results[result] = self.results[result]
+                        if len(new_results) == 1:
+                            key = [k for k, v in new_results.items()
+                                   if v == 100][0]
+                            self.bot.send_message(message.chat.id,
+                                                  'Зверніть увагу на категорію '
+                                                  f'"{key}": '
+                                                  'сюди ідуть усі витрати!',
+                                                  reply_markup=self.start_markup,
+                                                  )
+                            for value in self.results.keys():
+                                self.results[value] = 0
+                            clear_data()
+                            self.total_expense = 0
+                            self.save_conversation_status("False")
+                            new_results.clear()
+                            return
+                        most_expense = max(new_results, key=new_results.get)
+                        least_expense = min(new_results, key=new_results.get)
                         self.bot.send_message(message.chat.id,
                                               'Зверніть увагу на категорію '
-                                              f'"{key}": '
-                                              'сюди ідуть усі витрати!',
-                                              reply_markup=self.start_markup,
+                                              f'"{most_expense}": '
+                                              'сюди ідуть найбільше витрат!',
+                                              )
+                        self.bot.send_message(message.chat.id,
+                                              'Зверніть увагу на категорію '
+                                              f'"{least_expense}": '
+                                              'сюди ідуть найменше витрат!',
                                               )
                         for value in self.results.keys():
                             self.results[value] = 0
                         clear_data()
                         self.total_expense = 0
                         self.save_conversation_status("False")
-                        new_results.clear()
                         return
-                    most_expense = max(new_results, key=new_results.get)
-                    least_expense = min(new_results, key=new_results.get)
-                    self.bot.send_message(message.chat.id,
-                                          'Зверніть увагу на категорію '
-                                          f'"{most_expense}": '
-                                          'сюди ідуть найбільше витрат!',
-                                          )
-                    self.bot.send_message(message.chat.id,
-                                          'Зверніть увагу на категорію '
-                                          f'"{least_expense}": '
-                                          'сюди ідуть найменше витрат!',
-                                          )
-                    for value in self.results.keys():
-                        self.results[value] = 0
-                    clear_data()
-                    self.total_expense = 0
-                    self.save_conversation_status("False")
-                    return
+                    except AttributeError:
+                        self.bot.send_message(message.chat.id,
+                                              'Поки що немає чого обраховувати!',
+                                              reply_markup=self.start_markup,
+                                              )
+                        self.save_conversation_status("False")
+                        clear_data()
+                        return
             if message.text.lower() == self.start_buttons[1]:
                 if self.conversation == "False":
                     self.bot.reply_to(message,
@@ -161,7 +171,10 @@ class Bot:
         def enter_date(message) -> None:
             user_entered_days = message.text
             if user_entered_days not in self.days:
-                self.bot.reply_to(message, "Некорректний день!")
+                self.bot.send_message(message.chat.id,
+                                      "Некорректний день!",
+                                      reply_markup=self.start_markup,
+                                      )
 
                 return
             msg = self.bot.send_message(message.chat.id,
@@ -176,7 +189,10 @@ class Bot:
             """
             user_amount_of_expenses = message.text
             if not user_amount_of_expenses.isdigit():
-                self.bot.reply_to(message, 'Сумма має бути числом!')
+                self.bot.send_message(message.chat.id,
+                                      'Сумма має бути числом!',
+                                      reply_markup=self.start_markup,
+                                      )
                 return
             self.data['Total expenses'] = user_amount_of_expenses
             self.bot.send_message(message.chat.id,
@@ -185,20 +201,24 @@ class Bot:
                                   )
             self.save_expense()
 
-    def calculate_expenses(self) -> dict:
+    def calculate_expenses(self) -> Optional[dict]:
         """Calculate percents of expense for each category.
         Returns:
             dict with results of calculating
         """
         with open('expenses.json', 'r', encoding='utf8') as j:
             expenses_data = json.loads(j.read())
-        for expense in expenses_data['expenses']:
-            self.results[expense['Category']] += \
-                float(expense['Total expenses'])
-            self.total_expense += float(expense['Total expenses'])
-        for i in self.results.keys():
-            self.results[i] = (self.results[i] / self.total_expense) * 100
-        return self.results
+        try:
+            for expense in expenses_data['expenses']:
+                self.results[expense['Category']] += \
+                    float(expense['Total expenses'])
+                self.total_expense += float(expense['Total expenses'])
+            for i in self.results.keys():
+                self.results[i] = (self.results[i] / self.total_expense) * 100
+            return self.results
+        except (ZeroDivisionError, AttributeError):
+            self.save_conversation_status("False")
+            return
 
     def save_expense(self) -> None:
         """Saves data to json and clears old data"""
